@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RSA / ECB / PKCS1 — Cryptographic Tool</title>
+<style>
+/* ═══════════════════════════════════════════════
+   GOOGLE FONTS IMPORT
+   ═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS — DARK MODE
+   ═══════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  --bg:             #07090f;
+  --bg-secondary:   #0c0f18;
+  --surface:        #0f1319;
+  --surface-2:      #141922;
+  --surface-3:      #19202c;
+  --border:         #1d2536;
+  --border-2:       #243049;
+  --border-3:       #2d3d5c;
+  --accent:         #4b8cf5;
+  --accent-bright:  #6ba3ff;
+  --accent-dim:     rgba(75,140,245,.12);
+  --accent-dim2:    rgba(75,140,245,.22);
+  --accent-glow:    rgba(75,140,245,.30);
+  --green:          #2ec97a;
+  --green-dim:      rgba(46,201,122,.14);
+  --red:            #f06464;
+  --red-dim:        rgba(240,100,100,.14);
+  --amber:          #f0b840;
+  --amber-dim:      rgba(240,184,64,.14);
+  --text-primary:   #dde5f2;
+  --text-secondary: #8898b8;
+  --text-tertiary:  #4e5f7a;
+  --text-disabled:  #30405a;
+  --shadow-xs:      0 1px 3px rgba(0,0,0,.5);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,.55);
+  --shadow-md:      0 4px 20px rgba(0,0,0,.65);
+  --shadow-lg:      0 8px 40px rgba(0,0,0,.75);
+  --radius-xs:      5px;
+  --radius-sm:      8px;
+  --radius-md:      12px;
+  --radius-lg:      16px;
+  --font-sans:      'Inter', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --topbar-bg:      rgba(7,9,15,.88);
+  --grid-line:      rgba(75,140,245,.032);
+  --grid-accent:    rgba(75,140,245,.07);
+}
+
+/* ═══════════════════════════════════════════════
+   LIGHT MODE TOKENS
+   ═══════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:             #eef1f8;
+  --bg-secondary:   #e6eaf4;
+  --surface:        #ffffff;
+  --surface-2:      #f5f7fc;
+  --surface-3:      #edf0f8;
+  --border:         #d8dff0;
+  --border-2:       #c4cee5;
+  --border-3:       #aabbda;
+  --accent:         #2462d4;
+  --accent-bright:  #1850b8;
+  --accent-dim:     rgba(36,98,212,.09);
+  --accent-dim2:    rgba(36,98,212,.17);
+  --accent-glow:    rgba(36,98,212,.22);
+  --green:          #148a52;
+  --green-dim:      rgba(20,138,82,.10);
+  --red:            #cc3333;
+  --red-dim:        rgba(204,51,51,.10);
+  --amber:          #b07c0a;
+  --amber-dim:      rgba(176,124,10,.10);
+  --text-primary:   #0f1928;
+  --text-secondary: #3d5070;
+  --text-tertiary:  #7080a0;
+  --text-disabled:  #a8b6cc;
+  --shadow-xs:      0 1px 3px rgba(0,0,0,.08);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,.10);
+  --shadow-md:      0 4px 20px rgba(0,0,0,.12);
+  --shadow-lg:      0 8px 40px rgba(0,0,0,.14);
+  --topbar-bg:      rgba(238,241,248,.94);
+  --grid-line:      rgba(36,98,212,.035);
+  --grid-accent:    rgba(36,98,212,.065);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+  pointer-events: none;
+  transition: background-image .25s ease;
+}
+
+/* Radial glow top */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse 70% 40% at 50% -5%, var(--accent-dim) 0%, transparent 70%);
+  pointer-events: none;
+  transition: background .25s ease;
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT SHELL
+   ═══════════════════════════════════════════════ */
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════════
+   TOPBAR / HEADER
+   ═══════════════════════════════════════════════ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid var(--border);
+  transition: background .25s, border-color .25s;
+}
+
+.topbar-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Brand */
+.brand { display: flex; align-items: center; gap: 13px; }
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(145deg, var(--accent-dim2), var(--accent-dim));
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px var(--accent-dim), var(--shadow-xs);
+  transition: background .25s, border-color .25s, box-shadow .25s;
+}
+.brand-logo svg { width: 19px; height: 19px; color: var(--accent); }
+
+.brand-wordmark { display: flex; flex-direction: column; gap: 1px; }
+.brand-title {
+  font-family: var(--font-mono);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: .015em;
+  color: var(--text-primary);
+  line-height: 1;
+  transition: color .25s;
+}
+.brand-subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: color .25s;
+}
+
+.topbar-spacer { flex: 1; }
+
+/* Algorithm badge */
+.algo-chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-dim2);
+  border-radius: 20px;
+  padding: 5px 13px;
+  white-space: nowrap;
+  transition: background .25s, border-color .25s, color .25s;
+}
+
+/* Security badge */
+.security-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--green);
+  background: var(--green-dim);
+  border: 1px solid rgba(46,201,122,.2);
+  border-radius: 20px;
+  padding: 5px 11px;
+  white-space: nowrap;
+  transition: all .25s;
+}
+.security-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+/* Theme toggle */
+.theme-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s ease;
+  flex-shrink: 0;
+}
+.theme-btn:hover {
+  background: var(--surface-3);
+  border-color: var(--border-3);
+  color: var(--text-primary);
+  transform: rotate(20deg);
+}
+.theme-btn svg { width: 16px; height: 16px; }
+.theme-btn .icon-moon { display: block; }
+.theme-btn .icon-sun  { display: none; }
+[data-theme="light"] .theme-btn .icon-moon { display: none; }
+[data-theme="light"] .theme-btn .icon-sun  { display: block; }
+
+/* ═══════════════════════════════════════════════
+   MAIN CONTENT
+   ═══════════════════════════════════════════════ */
+.page-content {
+  flex: 1;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 32px 28px 64px;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════
+   SECTION LABELS
+   ═══════════════════════════════════════════════ */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transition: color .25s;
+}
+.section-label::before {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-bright));
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   CARDS
+   ═══════════════════════════════════════════════ */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
+  transition: background .25s, border-color .25s, box-shadow .25s;
+}
+
+/* ═══════════════════════════════════════════════
+   BUTTONS — BASE
+   ═══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .16s ease;
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
+  outline: none;
+}
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+.btn-primary:hover {
+  background: var(--accent-bright);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+.btn-primary:active { transform: translateY(0); box-shadow: 0 2px 8px var(--accent-glow); }
+
+.btn-ghost {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-2);
+}
+.btn-ghost:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  border-color: var(--border-3);
+}
+
+.btn-danger {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(240,100,100,.22);
+}
+.btn-danger:hover { background: rgba(240,100,100,.22); }
+
+.btn-sm  { padding: 6px 12px; font-size: 12px; border-radius: var(--radius-xs); }
+.btn-xs  { padding: 4px 9px;  font-size: 11px; border-radius: var(--radius-xs); }
+
+.btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ═══════════════════════════════════════════════
+   KEY MANAGEMENT
+   ═══════════════════════════════════════════════ */
+.keygen-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.key-size-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: color .25s;
+}
+
+.key-size-group {
+  display: flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: background .25s, border-color .25s;
+}
+.key-size-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-2);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .04em;
+}
+.key-size-btn:last-child { border-right: none; }
+.key-size-btn:hover { background: var(--accent-dim); color: var(--accent); }
+.key-size-btn.active {
+  background: var(--accent-dim2);
+  color: var(--accent);
+}
+
+.keygen-sep {
+  width: 1px;
+  height: 24px;
+  background: var(--border-2);
+  flex-shrink: 0;
+}
+
+.keygen-right { display: flex; gap: 8px; margin-left: auto; align-items: center; flex-wrap: wrap; }
+
+/* Keygen spinner */
+.keygen-spinner {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.keygen-spinner .spin-ring { display: block; }
+
+/* Key grid */
+.key-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+@media (max-width: 700px) { .key-grid { grid-template-columns: 1fr; } }
+
+.key-panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: background .25s, border-color .25s;
+}
+.key-panel:focus-within {
+  border-color: var(--border-3);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.key-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  transition: background .25s, border-color .25s;
+}
+
+.key-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.kp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kp-dot.pub  { background: var(--green);  box-shadow: 0 0 5px var(--green); }
+.kp-dot.priv { background: var(--amber);  box-shadow: 0 0 5px var(--amber); }
+.key-panel-title.pub  { color: var(--green); }
+.key-panel-title.priv { color: var(--amber); }
+
+.key-panel-actions { display: flex; gap: 5px; }
+
+.key-panel textarea {
+  width: 100%;
+  height: 148px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: none;
+  outline: none;
+  transition: color .2s;
+}
+.key-panel textarea::placeholder { color: var(--text-disabled); }
+.key-panel textarea:focus { color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════════
+   MODE TABS
+   ═══════════════════════════════════════════════ */
+.mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.mode-tabs {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  gap: 2px;
+  transition: background .25s, border-color .25s;
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .16s ease;
+  user-select: none;
+}
+.mode-tab:hover:not(.active) {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+.mode-tab.active {
+  background: var(--accent-dim2);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.io-section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  transition: color .25s;
+}
+
+/* ═══════════════════════════════════════════════
+   IO WORKSPACE
+   ═══════════════════════════════════════════════ */
+.workspace {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: background .25s, border-color .25s, box-shadow .25s;
+}
+.workspace-body { padding: 20px; }
+
+.io-grid {
+  display: grid;
+  grid-template-columns: 1fr 52px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 780px) {
+  .io-grid { grid-template-columns: 1fr; }
+  .io-arrow-col { display: none; }
+}
+
+.io-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color .2s, background .25s, box-shadow .2s;
+}
+.io-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.io-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 13px;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  transition: background .25s, border-color .25s;
+}
+
+.io-box-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  transition: color .25s;
+}
+.io-box-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-disabled);
+  transition: color .25s;
+}
+
+.io-box textarea {
+  width: 100%;
+  height: 196px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.75;
+  padding: 14px;
+  resize: none;
+  outline: none;
+  transition: color .2s;
+}
+.io-box textarea::placeholder { color: var(--text-disabled); }
+
+/* Arrow column */
+.io-arrow-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 54px;
+}
+.arrow-disk {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  box-shadow: var(--shadow-xs);
+  transition: all .25s;
+}
+
+/* Encoding toggle */
+.enc-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: background .25s, border-color .25s;
+}
+.enc-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border-2);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  cursor: pointer;
+  letter-spacing: .05em;
+  transition: all .12s;
+}
+.enc-btn:last-child { border-right: none; }
+.enc-btn.active { background: var(--accent-dim2); color: var(--accent); }
+.enc-btn:hover:not(.active) { background: var(--surface-2); color: var(--text-secondary); }
+
+/* Run row */
+.run-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.btn-run {
+  background: linear-gradient(135deg, #1c4ec0, var(--accent));
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 26px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all .16s ease;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  letter-spacing: .01em;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  user-select: none;
+  outline: none;
+}
+.btn-run:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px var(--accent-glow);
+}
+.btn-run:active { transform: none; }
+.btn-run:focus-visible { box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 16px var(--accent-glow); }
+.btn-run:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.char-counter {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-disabled);
+  margin-left: auto;
+  transition: color .25s;
+}
+
+/* Spinner */
+.spin-ring {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin-anim .65s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+.spin-ring.accent-spin {
+  border-color: var(--accent-dim2);
+  border-top-color: var(--accent);
+}
+@keyframes spin-anim { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════
+   STATUS BAR
+   ═══════════════════════════════════════════════ */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-height: 40px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-xs);
+  transition: background .25s, border-color .25s, color .25s;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-disabled);
+  flex-shrink: 0;
+  transition: background .2s, box-shadow .2s;
+}
+.status-dot.ok   { background: var(--green); box-shadow: 0 0 7px var(--green); }
+.status-dot.err  { background: var(--red);   box-shadow: 0 0 7px var(--red); }
+.status-dot.busy { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulsate 1s ease infinite; }
+
+@keyframes pulsate { 0%,100% { opacity:1; } 50% { opacity:.28; } }
+
+/* ═══════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════ */
+#toast {
+  position: fixed;
+  bottom: 26px;
+  right: 26px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  pointer-events: none;
+}
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+  animation: toast-slide .22s cubic-bezier(.16,1,.3,1);
+  pointer-events: all;
+  max-width: 330px;
+  transition: background .25s, border-color .25s;
+}
+.toast-item.success { border-left: 3px solid var(--green); }
+.toast-item.error   { border-left: 3px solid var(--red); }
+.toast-item.info    { border-left: 3px solid var(--accent); }
+@keyframes toast-slide {
+  from { opacity: 0; transform: translateX(22px) scale(.95); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ═══════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════ */
+footer {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  transition: border-color .25s;
+}
+footer p {
+  font-size: 11px;
+  color: var(--text-disabled);
+  font-family: var(--font-mono);
+  transition: color .25s;
+}
+.tag-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+  transition: background .25s, border-color .25s, color .25s;
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ═══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .security-chip { display: none; }
+}
+@media (max-width: 640px) {
+  .topbar-inner { padding: 0 16px; }
+  .page-content { padding: 20px 16px 48px; }
+  .brand-subtitle { display: none; }
+  .algo-chip { font-size: 9px; padding: 4px 10px; }
+  .keygen-right { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+<!-- ══════════ TOPBAR ══════════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          <circle cx="12" cy="16.5" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+      <div class="brand-wordmark">
+        <span class="brand-title">RSA Cryptographic Tool</span>
+        <span class="brand-subtitle">Asymmetric Encryption Engine</span>
+      </div>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="security-chip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+      Client-side Only
+    </div>
+    <div class="algo-chip">RSA / ECB / PKCS1</div>
+    <button class="theme-btn" id="btnTheme" title="Toggle theme" aria-label="Toggle dark/light mode">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="page-content">
+
+  <!-- KEY MANAGEMENT -->
+  <div class="section-label">Key Management</div>
+  <div class="card">
+    <div class="keygen-row">
+      <span class="key-size-label">Key&nbsp;Size</span>
+      <div class="key-size-group">
+        <button class="key-size-btn" data-bits="1024">1024</button>
+        <button class="key-size-btn active" data-bits="2048">2048</button>
+        <button class="key-size-btn" data-bits="4096">4096</button>
+      </div>
+      <div class="keygen-sep"></div>
+      <button class="btn btn-primary" id="btnGenerate">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Generate Key Pair
+      </button>
+      <div class="keygen-spinner" id="keygenSpinner">
+        <div class="spin-ring accent-spin"></div>
+        Generating keys&hellip;
+      </div>
+      <div class="keygen-right">
+        <button class="btn btn-ghost btn-sm" id="btnImportPub">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import Public Key
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btnImportPriv">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import Private Key
+        </button>
+        <button class="btn btn-danger btn-sm" id="btnClearKeys">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="key-grid">
+      <!-- Public Key -->
+      <div class="key-panel">
+        <div class="key-panel-header">
+          <span class="key-panel-title pub">
+            <span class="kp-dot pub"></span>
+            Public Key (PKCS#8)
+          </span>
+          <div class="key-panel-actions">
+            <button class="btn btn-ghost btn-xs" id="btnCopyPub">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy
+            </button>
+            <button class="btn btn-ghost btn-xs" id="btnDownloadPub">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Save
+            </button>
+          </div>
+        </div>
+        <textarea id="publicKeyArea" placeholder="-----BEGIN PUBLIC KEY-----&#10;Paste or generate a public key...&#10;-----END PUBLIC KEY-----" spellcheck="false" readonly></textarea>
+      </div>
+
+      <!-- Private Key -->
+      <div class="key-panel">
+        <div class="key-panel-header">
+          <span class="key-panel-title priv">
+            <span class="kp-dot priv"></span>
+            Private Key (PKCS#8)
+          </span>
+          <div class="key-panel-actions">
+            <button class="btn btn-ghost btn-xs" id="btnCopyPriv">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy
+            </button>
+            <button class="btn btn-ghost btn-xs" id="btnDownloadPriv">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Save
+            </button>
+          </div>
+        </div>
+        <textarea id="privateKeyArea" placeholder="-----BEGIN PRIVATE KEY-----&#10;Paste or generate a private key...&#10;-----END PRIVATE KEY-----" spellcheck="false" readonly></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODE SELECTOR + IO -->
+  <div class="mode-bar">
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="encrypt">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Encrypt
+      </button>
+      <button class="mode-tab" data-mode="decrypt">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 5-4.9"/>
+          <path d="M17 11V7"/>
+        </svg>
+        Decrypt
+      </button>
+    </div>
+    <span class="io-section-label" id="ioLabel">Encrypt — Plaintext &rarr; Ciphertext</span>
+  </div>
+
+  <div class="workspace">
+    <div class="workspace-body">
+      <div class="io-grid">
+        <!-- Input -->
+        <div class="io-box">
+          <div class="io-box-header">
+            <span class="io-box-label" id="inputLabel">Plaintext</span>
+            <span class="io-box-meta" id="inputMeta">UTF-8 string</span>
+          </div>
+          <textarea id="inputArea" placeholder="Type or paste your plaintext here&hellip;" spellcheck="false"></textarea>
+        </div>
+
+        <!-- Arrow -->
+        <div class="io-arrow-col">
+          <div class="arrow-disk">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="io-box">
+          <div class="io-box-header">
+            <span class="io-box-label" id="outputLabel">Ciphertext</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <div class="enc-toggle" id="encToggle" title="Output encoding format">
+                <button class="enc-btn active" data-enc="base64">Base64</button>
+                <button class="enc-btn" data-enc="hex">Hex</button>
+              </div>
+              <button class="btn btn-ghost btn-xs" id="btnCopyOutput">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy
+              </button>
+            </div>
+          </div>
+          <textarea id="outputArea" placeholder="Encrypted output will appear here&hellip;" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+
+      <!-- Run row -->
+      <div class="run-row">
+        <button class="btn-run" id="btnRun">
+          <div class="spin-ring" id="runSpin"></div>
+          <svg id="runIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span id="runLabel">Encrypt</span>
+        </button>
+        <button class="btn btn-ghost" id="btnClear">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Clear
+        </button>
+        <button class="btn btn-ghost" id="btnSwap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3L4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/>
+          </svg>
+          Swap IO
+        </button>
+        <span class="char-counter" id="charCount">0 chars</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Ready &mdash; generate or paste keys to begin.</span>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>RSA Cryptographic Tool &middot; Client-side only &middot; No data transmitted</p>
+    <div class="tag-row">
+      <span class="tag">RSA/ECB/PKCS1Padding</span>
+      <span class="tag">PKCS#1 v1.5</span>
+      <span class="tag">Pure JS &middot; No deps</span>
+      <span class="tag">1024 / 2048 / 4096-bit</span>
+    </div>
+  </footer>
+
+</main>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="importPubFile"  accept=".pem,.key,.txt" style="display:none" />
+<input type="file" id="importPrivFile" accept=".pem,.key,.txt" style="display:none" />
+
+<script>
+'use strict';
+
+/* ── BigInt helpers ── */
+const B = BigInt;
+
+function bigintToBytes(n, len) {
+  const hex = n.toString(16).padStart(len * 2, '0');
+  const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  return arr;
+}
+
+function bytesToBigint(arr) {
+  let hex = '';
+  for (let b of arr) hex += b.toString(16).padStart(2, '0');
+  return hex ? B('0x' + hex) : B(0);
+}
+
+function modpow(base, exp, mod) {
+  let result = B(1);
+  base = base % mod;
+  while (exp > B(0)) {
+    if (exp % B(2) === B(1)) result = (result * base) % mod;
+    exp >>= B(1);
+    base = (base * base) % mod;
+  }
+  return result;
+}
+
+/* ── Random bytes (crypto-grade) ── */
+function randomBytes(n) {
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return arr;
+}
+
+/* ── Probable prime test (Miller-Rabin, 20 rounds) ── */
+function millerRabin(n, rounds = 20) {
+  if (n < B(2)) return false;
+  if (n === B(2) || n === B(3)) return true;
+  if (n % B(2) === B(0)) return false;
+
+  let d = n - B(1), r = 0;
+  while (d % B(2) === B(0)) { d >>= B(1); r++; }
+
+  outer: for (let i = 0; i < rounds; i++) {
+    let a;
+    do {
+      const buf = randomBytes(Math.ceil(n.toString(16).length / 2));
+      a = bytesToBigint(buf) % (n - B(4)) + B(2);
+    } while (a < B(2) || a >= n - B(1));
+
+    let x = modpow(a, d, n);
+    if (x === B(1) || x === n - B(1)) continue;
+    for (let j = 0; j < r - 1; j++) {
+      x = modpow(x, B(2), n);
+      if (x === n - B(1)) continue outer;
+    }
+    return false;
+  }
+  return true;
+}
+
+function randomPrime(bits) {
+  while (true) {
+    const buf = randomBytes(bits >> 3);
+    buf[0] |= 0x80;           // ensure top bit set
+    buf[buf.length - 1] |= 0x01; // ensure odd
+    const candidate = bytesToBigint(buf);
+    if (millerRabin(candidate)) return candidate;
+  }
+}
+
+function gcd(a, b) {
+  while (b) { [a, b] = [b, a % b]; }
+  return a;
+}
+
+function modInverse(a, m) {
+  let [old_r, r] = [a, m];
+  let [old_s, s] = [B(1), B(0)];
+  while (r !== B(0)) {
+    const q = old_r / r;
+    [old_r, r] = [r, old_r - q * r];
+    [old_s, s] = [s, old_s - q * s];
+  }
+  return ((old_s % m) + m) % m;
+}
+
+/* RSA Key Generation */
+function generateKeyPair(bits) {
+  const halfBits = bits >> 1;
+  let p, q, n, phi, e, d;
+  e = B(65537);
+
+  do {
+    p = randomPrime(halfBits);
+    do { q = randomPrime(halfBits); } while (q === p);
+    n = p * q;
+    phi = (p - B(1)) * (q - B(1));
+  } while (gcd(e, phi) !== B(1) || n.toString(2).length < bits - 1);
+
+  d = modInverse(e, phi);
+
+  // CRT components
+  const dp = d % (p - B(1));
+  const dq = d % (q - B(1));
+  const qInv = modInverse(q, p);
+
+  return { n, e, d, p, q, dp, dq, qInv, bits };
+}
+
+/* PKCS#1 v1.5 Padding */
+function pkcs1v15Pad(message, emLen) {
+  // EM = 0x00 || 0x02 || PS || 0x00 || M
+  const mLen = message.length;
+  if (mLen > emLen - 11) throw new Error(`Message too long. Max ${emLen - 11} bytes for ${emLen * 8}-bit key.`);
+
+  const psLen = emLen - mLen - 3;
+  const ps = new Uint8Array(psLen);
+  // PS must be non-zero random bytes
+  let filled = 0;
+  while (filled < psLen) {
+    const buf = randomBytes(psLen - filled + 16);
+    for (const b of buf) {
+      if (b !== 0 && filled < psLen) { ps[filled++] = b; }
+    }
+  }
+
+  const em = new Uint8Array(emLen);
+  em[0] = 0x00; em[1] = 0x02;
+  em.set(ps, 2);
+  em[2 + psLen] = 0x00;
+  em.set(message, 3 + psLen);
+  return em;
+}
+
+function pkcs1v15Unpad(em) {
+  if (em[0] !== 0x00 || em[1] !== 0x02) throw new Error('Decryption error: invalid PKCS#1 v1.5 block type.');
+  let i = 2;
+  while (i < em.length && em[i] !== 0x00) i++;
+  if (i >= em.length) throw new Error('Decryption error: no zero separator found in padding.');
+  if (i - 2 < 8) throw new Error('Decryption error: padding string too short (< 8 bytes).');
+  return em.slice(i + 1);
+}
+
+/* RSA Core Primitives (raw) */
+function rsaEncryptRaw(m, e, n, keyBytes) {
+  return bigintToBytes(modpow(bytesToBigint(m), e, n), keyBytes);
+}
+
+function rsaDecryptRaw(c, d, n, keyBytes) {
+  return bigintToBytes(modpow(bytesToBigint(c), d, n), keyBytes);
+}
+
+/* CRT-optimised decryption */
+function rsaDecryptCRT(cArr, key) {
+  const c = bytesToBigint(cArr);
+  const { d, p, q, dp, dq, qInv, n } = key;
+  const m1 = modpow(c, dp, p);
+  const m2 = modpow(c, dq, q);
+  let h = (qInv * ((m1 - m2 + p) % p)) % p;
+  const m = (m2 + q * h) % n;
+  return bigintToBytes(m, Math.ceil(n.toString(16).length / 2));
+}
+
+/* RSA / ECB / PKCS1 - Encrypt */
+function rsaEncrypt(plaintext, publicKey) {
+  const keyBytes = Math.ceil(publicKey.n.toString(16).length / 2);
+  const maxChunk = keyBytes - 11;
+  const msgBytes = typeof plaintext === 'string'
+    ? new TextEncoder().encode(plaintext)
+    : plaintext;
+
+  const blocks = [];
+  for (let offset = 0; offset < msgBytes.length; offset += maxChunk) {
+    const chunk = msgBytes.slice(offset, offset + maxChunk);
+    const padded = pkcs1v15Pad(chunk, keyBytes);
+    const cipher = rsaEncryptRaw(padded, publicKey.e, publicKey.n, keyBytes);
+    blocks.push(cipher);
+  }
+
+  // Concatenate all cipher blocks
+  const out = new Uint8Array(blocks.reduce((s, b) => s + b.length, 0));
+  let pos = 0;
+  for (const b of blocks) { out.set(b, pos); pos += b.length; }
+  return out;
+}
+
+/* RSA / ECB / PKCS1 - Decrypt */
+function rsaDecrypt(cipherbytes, privateKey) {
+  const keyBytes = Math.ceil(privateKey.n.toString(16).length / 2);
+  if (cipherbytes.length % keyBytes !== 0) {
+    throw new Error(`Ciphertext length (${cipherbytes.length}) must be a multiple of key size (${keyBytes} bytes).`);
+  }
+
+  const chunks = [];
+  for (let offset = 0; offset < cipherbytes.length; offset += keyBytes) {
+    const block = cipherbytes.slice(offset, offset + keyBytes);
+    const raw = rsaDecryptCRT(block, privateKey);
+    const unpadded = pkcs1v15Unpad(raw);
+    chunks.push(unpadded);
+  }
+
+  const out = new Uint8Array(chunks.reduce((s, b) => s + b.length, 0));
+  let pos = 0;
+  for (const b of chunks) { out.set(b, pos); pos += b.length; }
+  return out;
+}
+
+/* PEM Encoding / Decoding */
+// ASN.1 DER helpers
+function derLen(n) {
+  if (n < 0x80) return new Uint8Array([n]);
+  if (n < 0x100) return new Uint8Array([0x81, n]);
+  return new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
+}
+
+function derSeq(content) {
+  return new Uint8Array([0x30, ...derLen(content.length), ...content]);
+}
+
+function derInt(n) {
+  let bytes = bigintToBytes(n, Math.ceil(n.toString(16).length / 2) || 1);
+  if (bytes[0] & 0x80) bytes = new Uint8Array([0, ...bytes]);
+  return new Uint8Array([0x02, ...derLen(bytes.length), ...bytes]);
+}
+
+function derNull() { return new Uint8Array([0x05, 0x00]); }
+
+function derOid(oidHex) {
+  const bytes = oidHex.match(/.{1,2}/g).map(h => parseInt(h, 16));
+  return new Uint8Array([0x06, bytes.length, ...bytes]);
+}
+
+// RSA OID: 1.2.840.113549.1.1.1
+const RSA_OID = '2a864886f70d010101';
+
+function encodePublicKeyPem(key) {
+  const keyBytes = Math.ceil(key.n.toString(16).length / 2);
+  // RSAPublicKey ::= SEQUENCE { modulus, publicExponent }
+  const rsaPub = derSeq([...derInt(key.n), ...derInt(key.e)]);
+  // SubjectPublicKeyInfo
+  const algId = derSeq([...derOid(RSA_OID), ...derNull()]);
+  const bitStr = new Uint8Array([0x03, ...derLen(rsaPub.length + 1), 0x00, ...rsaPub]);
+  const spki = derSeq([...algId, ...bitStr]);
+  const b64 = uint8ToBase64(spki);
+  return `-----BEGIN PUBLIC KEY-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END PUBLIC KEY-----`;
+}
+
+function encodePrivateKeyPem(key) {
+  // RSAPrivateKey PKCS#1
+  const seq = derSeq([
+    ...derInt(B(0)), // version
+    ...derInt(key.n),
+    ...derInt(key.e),
+    ...derInt(key.d),
+    ...derInt(key.p),
+    ...derInt(key.q),
+    ...derInt(key.dp),
+    ...derInt(key.dq),
+    ...derInt(key.qInv),
+  ]);
+  // PKCS#8 PrivateKeyInfo wrapper
+  const algId = derSeq([...derOid(RSA_OID), ...derNull()]);
+  const privKeyOctet = new Uint8Array([0x04, ...derLen(seq.length), ...seq]);
+  const pkcs8 = derSeq([...derInt(B(0)), ...algId, ...privKeyOctet]);
+  const b64 = uint8ToBase64(pkcs8);
+  return `-----BEGIN PRIVATE KEY-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END PRIVATE KEY-----`;
+}
+
+/* DER parser (minimal, for PEM import) */
+function derRead(buf, pos) {
+  const tag = buf[pos++];
+  let len = buf[pos++];
+  if (len & 0x80) {
+    const nb = len & 0x7f;
+    len = 0;
+    for (let i = 0; i < nb; i++) len = (len << 8) | buf[pos++];
+  }
+  return { tag, len, start: pos, end: pos + len };
+}
+
+function derReadSeqChildren(buf, start, end) {
+  const items = [];
+  let pos = start;
+  while (pos < end) {
+    const item = derRead(buf, pos);
+    items.push(item);
+    pos = item.end;
+  }
+  return items;
+}
+
+function derReadInt(buf, item) {
+  let data = buf.slice(item.start, item.end);
+  while (data[0] === 0) data = data.slice(1);
+  return bytesToBigint(data);
+}
+
+function parsePemDer(pem) {
+  const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  return base64ToUint8(b64);
+}
+
+function parsePublicKeyPem(pem) {
+  const der = parsePemDer(pem);
+  // SPKI: SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING }
+  const root = derRead(der, 0);
+  const children = derReadSeqChildren(der, root.start, root.end);
+  // children[1] = BIT STRING
+  const bitStr = children[1];
+  // skip 0x00 prefix byte in BIT STRING
+  const inner = der.slice(bitStr.start + 1, bitStr.end);
+  const innerRoot = derRead(inner, 0);
+  const innerChildren = derReadSeqChildren(inner, innerRoot.start, innerRoot.end);
+  const n = derReadInt(inner, innerChildren[0]);
+  const e = derReadInt(inner, innerChildren[1]);
+  return { n, e };
+}
+
+function parsePrivateKeyPem(pem) {
+  const der = parsePemDer(pem);
+  // Try PKCS#8 or raw PKCS#1
+  const root = derRead(der, 0);
+  const children = derReadSeqChildren(der, root.start, root.end);
+
+  let rsaDer;
+  // PKCS#8: version=0, algorithmIdentifier, OCTET STRING
+  if (children.length >= 3 && children[2].tag === 0x04) {
+    rsaDer = der.slice(children[2].start, children[2].end);
+  } else {
+    rsaDer = der;
+  }
+
+  const rRoot = derRead(rsaDer, 0);
+  const rChildren = derReadSeqChildren(rsaDer, rRoot.start, rRoot.end);
+  // version, n, e, d, p, q, dp, dq, qInv
+  if (rChildren.length < 9) throw new Error('Invalid RSA private key DER structure.');
+  return {
+    n:    derReadInt(rsaDer, rChildren[1]),
+    e:    derReadInt(rsaDer, rChildren[2]),
+    d:    derReadInt(rsaDer, rChildren[3]),
+    p:    derReadInt(rsaDer, rChildren[4]),
+    q:    derReadInt(rsaDer, rChildren[5]),
+    dp:   derReadInt(rsaDer, rChildren[6]),
+    dq:   derReadInt(rsaDer, rChildren[7]),
+    qInv: derReadInt(rsaDer, rChildren[8]),
+  };
+}
+
+/* Base64 / Hex Utils */
+function uint8ToBase64(arr) {
+  let bin = '';
+  for (let i = 0; i < arr.length; i++) bin += String.fromCharCode(arr[i]);
+  return btoa(bin);
+}
+
+function base64ToUint8(b64) {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+function uint8ToHex(arr) {
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToUint8(hex) {
+  hex = hex.replace(/\s+/g, '');
+  const arr = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  return arr;
+}
+
+/* APP STATE */
+const state = {
+  keyPair: null,
+  publicKey: null,
+  privateKey: null,
+  mode: 'encrypt',
+  encoding: 'base64',
+  keyBits: 2048,
+};
+
+/* UI HELPERS */
+function toast(msg, type = 'info', duration = 3000) {
+  const container = document.getElementById('toast');
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function setStatus(text, state_) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot ' + (state_ || '');
+  txt.textContent = text;
+}
+
+function setLoading(on) {
+  const spin = document.getElementById('runSpin');
+  const icon = document.getElementById('runIcon');
+  const btn  = document.getElementById('btnRun');
+  spin.style.display = on ? 'block' : 'none';
+  icon.style.display = on ? 'none' : 'block';
+  btn.disabled = on;
+}
+
+function updateModeUI() {
+  const isEncrypt = state.mode === 'encrypt';
+  document.getElementById('ioLabel').textContent =
+    isEncrypt ? 'Encrypt \u2014 Plaintext \u2192 Ciphertext' : 'Decrypt \u2014 Ciphertext \u2192 Plaintext';
+  document.getElementById('inputLabel').textContent  = isEncrypt ? 'Plaintext' : 'Ciphertext';
+  document.getElementById('inputMeta').textContent   = isEncrypt ? 'UTF-8 string' : state.encoding.toUpperCase();
+  document.getElementById('outputLabel').textContent = isEncrypt ? 'Ciphertext' : 'Plaintext';
+  document.getElementById('runLabel').textContent    = isEncrypt ? 'Encrypt' : 'Decrypt';
+  document.getElementById('inputArea').placeholder   =
+    isEncrypt ? 'Type or paste your plaintext here\u2026' : 'Paste Base64 or Hex ciphertext here\u2026';
+  document.getElementById('outputArea').placeholder  =
+    isEncrypt ? 'Encrypted output will appear here\u2026' : 'Decrypted plaintext will appear here\u2026';
+  document.getElementById('encToggle').style.display = isEncrypt ? 'flex' : 'none';
+}
+
+/* KEY GEN (async via setTimeout to allow UI repaint) */
+function doGenerateKeys() {
+  const spinner = document.getElementById('keygenSpinner');
+  const btn     = document.getElementById('btnGenerate');
+  spinner.style.display = 'flex';
+  btn.disabled = true;
+  setStatus('Generating ' + state.keyBits + '-bit RSA key pair\u2026', 'busy');
+
+  setTimeout(() => {
+    try {
+      const kp = generateKeyPair(state.keyBits);
+      state.keyPair   = kp;
+      state.publicKey  = { n: kp.n, e: kp.e };
+      state.privateKey = kp;
+
+      document.getElementById('publicKeyArea').value  = encodePublicKeyPem(kp);
+      document.getElementById('privateKeyArea').value = encodePrivateKeyPem(kp);
+
+      setStatus(`${state.keyBits}-bit RSA key pair generated successfully.`, 'ok');
+      toast('Key pair generated!', 'success');
+    } catch (e) {
+      setStatus('Key generation failed: ' + e.message, 'err');
+      toast('Key generation error: ' + e.message, 'error', 5000);
+    } finally {
+      spinner.style.display = 'none';
+      btn.disabled = false;
+    }
+  }, 30);
+}
+
+/* ENCRYPT / DECRYPT */
+function doRun() {
+  const input = document.getElementById('inputArea').value.trim();
+  if (!input) { toast('Please enter input data.', 'error'); return; }
+
+  if (state.mode === 'encrypt') {
+    if (!state.publicKey) {
+      // Try parsing from textarea
+      try {
+        state.publicKey = parsePublicKeyPem(document.getElementById('publicKeyArea').value);
+      } catch {
+        toast('No public key available. Generate or import one.', 'error'); return;
+      }
+    }
+    setLoading(true);
+    setStatus('Encrypting\u2026', 'busy');
+    setTimeout(() => {
+      try {
+        const cipher = rsaEncrypt(input, state.publicKey);
+        const out = state.encoding === 'base64' ? uint8ToBase64(cipher) : uint8ToHex(cipher);
+        document.getElementById('outputArea').value = out;
+        setStatus(`Encrypted successfully. Output: ${cipher.length} bytes (${Math.ceil(cipher.length / (Math.ceil(state.publicKey.n.toString(16).length / 2)))} block(s)).`, 'ok');
+        toast('Encrypted!', 'success');
+      } catch (e) {
+        setStatus('Encryption failed: ' + e.message, 'err');
+        toast('Encryption error: ' + e.message, 'error', 6000);
+        document.getElementById('outputArea').value = '';
+      } finally { setLoading(false); }
+    }, 20);
+  } else {
+    if (!state.privateKey) {
+      try {
+        state.privateKey = parsePrivateKeyPem(document.getElementById('privateKeyArea').value);
+      } catch {
+        toast('No private key available. Generate or import one.', 'error'); return;
+      }
+    }
+    setLoading(true);
+    setStatus('Decrypting\u2026', 'busy');
+    setTimeout(() => {
+      try {
+        let cipherBytes;
+        // Auto-detect encoding
+        const cleaned = input.replace(/\s+/g, '');
+        if (/^[0-9a-fA-F]+$/.test(cleaned) && cleaned.length % 2 === 0 && !btoa_safe(cleaned)) {
+          cipherBytes = hexToUint8(cleaned);
+        } else {
+          try { cipherBytes = base64ToUint8(cleaned); }
+          catch { cipherBytes = hexToUint8(cleaned); }
+        }
+        const plain = rsaDecrypt(cipherBytes, state.privateKey);
+        document.getElementById('outputArea').value = new TextDecoder().decode(plain);
+        setStatus('Decrypted successfully.', 'ok');
+        toast('Decrypted!', 'success');
+      } catch (e) {
+        setStatus('Decryption failed: ' + e.message, 'err');
+        toast('Decryption error: ' + e.message, 'error', 6000);
+        document.getElementById('outputArea').value = '';
+      } finally { setLoading(false); }
+    }, 20);
+  }
+}
+
+function btoa_safe(s) {
+  try { atob(s); return true; } catch { return false; }
+}
+
+/* COPY / DOWNLOAD HELPERS */
+async function copyText(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${label} copied to clipboard.`, 'success');
+  } catch {
+    toast('Copy failed \u2014 use Ctrl+A, Ctrl+C manually.', 'error');
+  }
+}
+
+function downloadText(text, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* THEME TOGGLE */
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  try { localStorage.setItem('rsa-tool-theme', theme); } catch(_) {}
+}
+
+function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem('rsa-tool-theme'); } catch(_) {}
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+}
+
+/* WIRE UP EVENTS */
+initTheme();
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Theme toggle
+  document.getElementById('btnTheme').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  });
+
+  // Key size buttons
+  document.querySelectorAll('.key-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.key-size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.keyBits = parseInt(btn.dataset.bits);
+    });
+  });
+
+  // Generate
+  document.getElementById('btnGenerate').addEventListener('click', doGenerateKeys);
+
+  // Mode tabs
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      state.mode = tab.dataset.mode;
+      document.getElementById('inputArea').value  = '';
+      document.getElementById('outputArea').value = '';
+      updateModeUI();
+      setStatus('Mode: ' + (state.mode === 'encrypt' ? 'Encrypt' : 'Decrypt'), '');
+    });
+  });
+
+  // Encoding toggle
+  document.querySelectorAll('.enc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.enc-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.encoding = btn.dataset.enc;
+      // Re-encode existing output if any
+      const out = document.getElementById('outputArea').value.trim();
+      if (out) {
+        try {
+          const bytes = state.encoding === 'base64' ? hexToUint8(out) : base64ToUint8(out);
+          document.getElementById('outputArea').value =
+            state.encoding === 'base64' ? uint8ToBase64(bytes) : uint8ToHex(bytes);
+        } catch {}
+      }
+    });
+  });
+
+  // Run
+  document.getElementById('btnRun').addEventListener('click', doRun);
+
+  // Keyboard shortcut Ctrl/Cmd+Enter
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doRun();
+  });
+
+  // Clear IO
+  document.getElementById('btnClear').addEventListener('click', () => {
+    document.getElementById('inputArea').value  = '';
+    document.getElementById('outputArea').value = '';
+    document.getElementById('charCount').textContent = '0 chars';
+    setStatus('Ready.', '');
+  });
+
+  // Swap IO
+  document.getElementById('btnSwap').addEventListener('click', () => {
+    const inp = document.getElementById('inputArea');
+    const out = document.getElementById('outputArea');
+    const tmp = inp.value;
+    inp.value = out.value;
+    out.value = tmp;
+  });
+
+  // Clear keys
+  document.getElementById('btnClearKeys').addEventListener('click', () => {
+    document.getElementById('publicKeyArea').value  = '';
+    document.getElementById('privateKeyArea').value = '';
+    state.keyPair = state.publicKey = state.privateKey = null;
+    toast('Keys cleared.', 'info');
+    setStatus('Keys cleared.', '');
+  });
+
+  // Copy pub/priv
+  document.getElementById('btnCopyPub').addEventListener('click', () => {
+    const t = document.getElementById('publicKeyArea').value;
+    if (t) copyText(t, 'Public key'); else toast('No public key to copy.', 'error');
+  });
+
+  document.getElementById('btnCopyPriv').addEventListener('click', () => {
+    const t = document.getElementById('privateKeyArea').value;
+    if (t) copyText(t, 'Private key'); else toast('No private key to copy.', 'error');
+  });
+
+  // Download pub/priv
+  document.getElementById('btnDownloadPub').addEventListener('click', () => {
+    const t = document.getElementById('publicKeyArea').value;
+    if (t) downloadText(t, 'rsa_public_key.pem'); else toast('No public key to download.', 'error');
+  });
+
+  document.getElementById('btnDownloadPriv').addEventListener('click', () => {
+    const t = document.getElementById('privateKeyArea').value;
+    if (t) downloadText(t, 'rsa_private_key.pem'); else toast('No private key to download.', 'error');
+  });
+
+  // Copy output
+  document.getElementById('btnCopyOutput').addEventListener('click', () => {
+    const t = document.getElementById('outputArea').value;
+    if (t) copyText(t, 'Output'); else toast('No output to copy.', 'error');
+  });
+
+  // Import keys from file
+  document.getElementById('btnImportPub').addEventListener('click', () => {
+    document.getElementById('importPubFile').click();
+  });
+
+  document.getElementById('btnImportPriv').addEventListener('click', () => {
+    document.getElementById('importPrivFile').click();
+  });
+
+  document.getElementById('importPubFile').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const pem = ev.target.result;
+      document.getElementById('publicKeyArea').value = pem;
+      try {
+        state.publicKey = parsePublicKeyPem(pem);
+        toast('Public key imported successfully.', 'success');
+        setStatus('Public key imported.', 'ok');
+      } catch (ex) {
+        toast('Failed to parse public key: ' + ex.message, 'error', 6000);
+      }
+    };
+    r.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('importPrivFile').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const pem = ev.target.result;
+      document.getElementById('privateKeyArea').value = pem;
+      try {
+        state.privateKey = parsePrivateKeyPem(pem);
+        toast('Private key imported successfully.', 'success');
+        setStatus('Private key imported.', 'ok');
+      } catch (ex) {
+        toast('Failed to parse private key: ' + ex.message, 'error', 6000);
+      }
+    };
+    r.readAsText(file);
+    e.target.value = '';
+  });
+
+  // Allow editing key textareas manually - parse on blur
+  document.getElementById('publicKeyArea').removeAttribute('readonly');
+  document.getElementById('privateKeyArea').removeAttribute('readonly');
+
+  document.getElementById('publicKeyArea').addEventListener('blur', () => {
+    const v = document.getElementById('publicKeyArea').value.trim();
+    if (!v) return;
+    try {
+      state.publicKey = parsePublicKeyPem(v);
+      setStatus('Public key parsed from input.', 'ok');
+    } catch {}
+  });
+
+  document.getElementById('privateKeyArea').addEventListener('blur', () => {
+    const v = document.getElementById('privateKeyArea').value.trim();
+    if (!v) return;
+    try {
+      state.privateKey = parsePrivateKeyPem(v);
+      setStatus('Private key parsed from input.', 'ok');
+    } catch {}
+  });
+
+  // Char count
+  document.getElementById('inputArea').addEventListener('input', () => {
+    const n = document.getElementById('inputArea').value.length;
+    document.getElementById('charCount').textContent = n.toLocaleString() + ' chars';
+  });
+
+  // Initial UI
+  updateModeUI();
+});
+</script>
+</body>
+</html>
